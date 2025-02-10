@@ -16,7 +16,7 @@
 <style scoped>
 footer {
   color: #b0b0b0;
-  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2)); /* Плавный фэйд к низу */
+  background: linear-gradient(to bottom, transparent, rgba(0, 0, 0, 0.2));
 }
 
 footer a {
