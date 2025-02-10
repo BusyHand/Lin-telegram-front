@@ -14,11 +14,11 @@ const store = createStore({
     actions: {
         fetchItems({ commit }) {
             const items = [
-                { id: '1', title: 'Красота природы', description: 'Наслаждайтесь красивыми пейзажами природы.', images: ['/src/icons/krasota-prirody-10.webp'] },
-                { id: '2', title: 'Горы на закате', description: 'Величественные горные пейзажи на фоне заката.', images: ['/src/icons/krasota-prirody-10.webp'] },
-                { id: '3', title: 'Лесная тишина', description: 'Окунитесь в атмосферу спокойствия среди вековых деревьев.', images: ['/src/icons/krasota-prirody-10.webp'] },
-                { id: '4', title: 'Озеро и рассвет', description: 'Завораживающий рассвет над зеркальной гладью воды.', images: ['/src/icons/krasota-prirody-10.webp'] },
-                { id: '5', title: 'Поляна цветов', description: 'Яркие краски природы на летней поляне.', images: ['/src/icons/krasota-prirody-10.webp'] }
+                { id: '1', title: 'Красота природы', description: 'Наслаждайтесь красивыми пейзажами природы.', images: ['/src/icons/1.jpg'] },
+                { id: '2', title: 'Горы на закате', description: 'Величественные горные пейзажи на фоне заката.', images: ['/src/icons/2.jpg'] },
+                { id: '3', title: 'Лесная тишина', description: 'Окунитесь в атмосферу спокойствия среди вековых деревьев.', images: ['/src/icons/3.jpg'] },
+                { id: '4', title: 'Озеро и рассвет', description: 'Завораживающий рассвет над зеркальной гладью воды.', images: ['/src/icons/4.png'] },
+                { id: '5', title: 'Поляна цветов', description: 'Яркие краски природы на летней поляне.', images: ['/src/icons/5.png'] }
             ];
             commit('setItems', items);
         }
