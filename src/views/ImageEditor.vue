@@ -1,10 +1,12 @@
 <template>
   <div class="container my-5">
-    <h1>Скоро будет</h1>
+    <svg-component></svg-component>
   </div>
 
 </template>
 
-<script>
+<script setup>
+import SvgComponent from "@/components/ui/editor/image/SvgComponent.vue";
+
 
 </script>
