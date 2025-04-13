@@ -1,27 +1,24 @@
 <template>
-  <a class="" @click="openModal">
-    <form class="d-flex me-2" role="search" @click="openModal">
-      <a class="btn btn-outline-light">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search"
-             viewBox="0 0 16 16">
-          <path
-              d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
-        </svg>
-      </a>
+  <a @click="openModal">
+    <form class="d-flex me-2" role="search">
+      <button type="button" class="search-button">
+        Поиск
+        <i class="bi bi-search mx-1"></i>
+      </button>
     </form>
   </a>
 
   <teleport to="body">
     <div class="modal fade" ref="modalRef" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true"
-         data-bs-backdrop="static">
+         data-bs-backdrop="static" role="dialog" aria-modal="true">
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
             <h1 class="modal-title fs-5" id="staticBackdropLabel">Поиск</h1>
-            <button type="button" class="btn-close" @click="closeModal"></button>
+            <button type="button" class="btn-close" @click="closeModal" aria-label="Закрыть"></button>
           </div>
           <div class="modal-body">
-            <search-form/>
+            <search-form @go-to-item="handleGoToItem"/>
           </div>
         </div>
       </div>
@@ -29,26 +26,45 @@
   </teleport>
 </template>
 
-<script>
-import {onMounted, ref} from "vue";
-import {Modal} from "bootstrap";
-import SearchForm from "@/components/form/SearchForm.vue";
+<script setup>
+import {onMounted, ref} from 'vue';
+import {Modal} from 'bootstrap';
+import SearchForm from '@/components/ui/navbar/SearchForm.vue';
+import router from '@/router';
 
-export default {
-  components: {SearchForm},
+const modalRef = ref(null);
+let modalInstance = null;
 
-  setup() {
-    const modalRef = ref(null);
-    let modalInstance = null;
+const openModal = () => modalInstance.show();
+const closeModal = () => modalInstance.hide();
 
-    onMounted(() => {
-      modalInstance = new Modal(modalRef.value);
-    });
-
-    const openModal = () => modalInstance.show();
-    const closeModal = () => modalInstance.hide();
-
-    return {modalRef, openModal, closeModal};
-  }
+const handleGoToItem = (category, id) => {
+  closeModal();
+  router.push({name: 'ItemPage', params: {itemName: category, id}});
 };
+
+onMounted(() => {
+  modalInstance = new Modal(modalRef.value);
+});
 </script>
+
+<style scoped>
+.search-button {
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  padding: 8px 16px;
+  border: 1px solid #ffffff;
+  color: #ffffff;
+  background-color: transparent;
+  border-radius: 4px;
+  transition: background-color 0.3s, color 0.3s;
+  width: auto;
+}
+
+@media (max-width: 767.98px) {
+  .search-button {
+    width: 100%;
+  }
+}
+</style>

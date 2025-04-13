@@ -1,5 +1,5 @@
 <template>
-  <button type="button" class="btn btn-outline-light me-2 ms-auto" @click="openModal">
+  <button type="button" :class="['btn btn-primary', customClass]" @click="openModal">
     Создать
   </button>
 
@@ -25,26 +25,25 @@
   </teleport>
 </template>
 
-<script>
-import {onMounted, ref} from "vue";
-import {Modal} from "bootstrap";
-import CrateItemForm from "@/components/form/CrateItemForm.vue";
+<script setup>
+import { ref, onMounted } from 'vue'
+import { Modal } from 'bootstrap'
+import CrateItemForm from '@/components/ui/editor/CrateItemForm.vue'
 
-export default {
-  components: {CrateItemForm},
-
-  setup() {
-    const modalRef = ref(null);
-    let modalInstance = null;
-
-    onMounted(() => {
-      modalInstance = new Modal(modalRef.value);
-    });
-
-    const openModal = () => modalInstance.show();
-    const closeModal = () => modalInstance.hide();
-
-    return {modalRef, openModal, closeModal};
+const props = defineProps({
+  customClass: {
+    type: String,
+    default: ''
   }
-};
+})
+
+const modalRef = ref(null)
+let modalInstance = null
+
+onMounted(() => {
+  modalInstance = new Modal(modalRef.value)
+})
+
+const openModal = () => modalInstance.show()
+const closeModal = () => modalInstance.hide()
 </script>

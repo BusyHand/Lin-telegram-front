@@ -1,9 +1,9 @@
 <template>
   <div class="col">
     <div class="card shadow-lg border-0 rounded-4">
-      <img :src="imgSrc" class="card-img-top rounded-top-4" :alt="title">
+      <img v-if="imgSrc" :src="imgSrc" class="card-img-top rounded-top-4">
       <div class="card-body">
-        <h5 class="card-title text-primary">{{ title }}</h5>
+        <h5 class="card-title text-primary">{{ name }}</h5>
         <p class="card-text text-muted">
           {{ description }}
         </p>
@@ -13,23 +13,21 @@
   </div>
 </template>
 
-<script>
-export default {
-  props: {
-    title: {
-      type: String,
-      required: true
-    },
-    description: {
-      type: String,
-      required: true
-    },
-    imgSrc: {
-      type: String,
-      required: true
-    }
+<script setup>
+defineProps({
+  name: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  imgSrc: {
+    type: String,
+    required: false
   }
-}
+});
 </script>
 
 <style scoped>

@@ -1,18 +1,21 @@
 <template>
-  <the-navbar/>
-  <div class="container">
-    <router-view/>
+  <div class="d-flex flex-column min-vh-100">
+    <the-navbar />
+    <div class="container flex-grow-1">
+      <router-view />
+    </div>
+    <the-footer />
   </div>
-  <the-footer/>
 </template>
+
 <script>
-import TheNavbar from "@/components/TheNavbar.vue";
+import TheNavbar from "@/components/ui/navbar/TheNavbar.vue";
 import TheFooter from "@/components/TheFooter.vue";
 
 export default {
-  setup() {
-  },
-  components: {TheFooter, TheNavbar}
-
-}
+  components: { TheNavbar, TheFooter }
+};
 </script>
+
+<style scoped>
+</style>
