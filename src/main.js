@@ -6,8 +6,10 @@ import {createApp} from 'vue'
 import App from './App.vue'
 import router from './router';
 import store from "@/store/store.js";
+import { VueTelegramPlugin } from 'vue-tg'
 
 createApp(App)
     .use(store)
     .use(router)
+    .use(VueTelegramPlugin)
     .mount('#app')

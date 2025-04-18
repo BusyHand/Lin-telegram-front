@@ -14,21 +14,14 @@
           <li class="nav-item">
             <router-link to="/" class="nav-link" aria-current="page">Главная</router-link>
           </li>
-          <li class="nav-item dropdown">
-            <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-              Редактор
-            </a>
-            <ul class="dropdown-menu">
-              <li class="dropdown-item">
-                <router-link to="/editor" class="nav-link" aria-current="page">Контента</router-link>
-              </li>
-              <li class="dropdown-item">
-                <router-link to="/editor/image" class="nav-link" aria-current="page">Изображений</router-link>
-              </li>
-            </ul>
-          </li>
           <li class="nav-item">
-            <router-link to="/admin" class="nav-link" aria-current="page">Администраторская</router-link>
+            <router-link to="/editor/image" class="nav-link" aria-current="page">Редактор изображения</router-link>
+          </li>
+          <li class="nav-item" v-if="isEditor">
+            <router-link to="/editor" class="nav-link">Редактор контента</router-link>
+          </li>
+          <li class="nav-item" v-if="isManager">
+            <router-link to="/admin" class="nav-link">Администраторская</router-link>
           </li>
           <li class="nav-item">
             <router-link to="/about" class="nav-link" aria-current="page">О нас</router-link>
@@ -46,17 +39,22 @@
 
 <script setup>
 import SearchModal from "@/components/ui/navbar/SearchModal.vue";
+import {useStore} from 'vuex';
+import {computed} from 'vue';
+
+const store = useStore();
+
+const isEditor = computed(() => store.getters.hasAnyRole('ADMIN', 'EDITOR'));
+const isManager = computed(() => store.getters.hasAnyRole('ADMIN', 'MANGER'));
+
 </script>
+
 
 <style scoped>
 @media (max-width: 767.98px) {
   .search {
     width: 100%;
   }
-}
-
-.dropdown-menu {
-  background-color: #0d6efd;
 }
 
 .dropdown-menu .dropdown-item {

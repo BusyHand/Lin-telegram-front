@@ -1,10 +1,10 @@
 <template>
   <div class="d-flex flex-column min-vh-100">
-    <the-navbar />
+    <the-navbar/>
     <div class="container flex-grow-1">
-      <router-view />
+      <router-view/>
     </div>
-    <the-footer />
+    <the-footer/>
   </div>
 </template>
 
@@ -13,7 +13,7 @@ import TheNavbar from "@/components/ui/navbar/TheNavbar.vue";
 import TheFooter from "@/components/TheFooter.vue";
 
 export default {
-  components: { TheNavbar, TheFooter }
+  components: {TheNavbar, TheFooter}
 };
 </script>
 

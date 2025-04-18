@@ -15,13 +15,18 @@
             :key="key"
             class="custom-col"
             :class="`custom-col-${index + 1}`"
-            :data-label="headers[index]">
+            :data-label="headers[index]"
+        >
           {{ truncateText(entry[key]) }}
         </div>
         <div class="custom-col custom-col-actions" data-label="Действия" @click.stop>
-          <edit-modal/>
-          <button class="custom-btn custom-btn-sm custom-btn-outline-danger" @click.stop="remove(entry.id)">
-            <i class="bi bi-trash-fill"></i>
+          <edit-modal
+              :item="entry"
+              :type="type"
+          />
+          <button class="custom-btn custom-btn-sm custom-btn-outline-danger"
+                  @click.stop="remove(entry.id)">
+            <i class="bi bi-trash-fill"/>
           </button>
         </div>
       </li>
@@ -37,9 +42,9 @@ const props = defineProps({
   title: String,
   headers: Array,
   keys: Array,
-  data: Array
+  data: Array,
+  type: String,
 })
-
 
 const truncateText = (text) =>
     text?.length > 100 ? text.substring(0, 100) + '...' : text || ''
@@ -47,7 +52,10 @@ const truncateText = (text) =>
 const emit = defineEmits(['delete', 'go-to-page'])
 
 const remove = (id) => emit('delete', id)
+
 const goToPage = (entry) => emit('go-to-page', entry)
+
+
 </script>
 
 <style scoped>

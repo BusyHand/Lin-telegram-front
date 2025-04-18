@@ -5,6 +5,8 @@ import ItemPage from "@/views/ItemPage.vue";
 import Editor from "@/views/Editor.vue";
 import Admin from "@/views/Admin.vue";
 import ImageEditor from "@/views/ImageEditor.vue";
+import store from "@/store/store.js";
+import Unauthorized from "@/views/Unauthorized.vue";
 
 
 const routes = [
@@ -39,6 +41,11 @@ const routes = [
         name: 'ImageEditor',
         component: ImageEditor,
     },
+    {
+        path: '/unauthorized',
+        name: 'Unauthorized',
+        component: Unauthorized,
+    },
 ];
 
 
@@ -48,5 +55,24 @@ const router = createRouter({
     linkActiveClass: 'active',
     linkExactActiveClass: 'active'
 });
+
+router.beforeEach(async (to, from, next) => {
+    if (to.path === '/unauthorized') {
+        return next();
+    }
+    try {
+        const success = await store.dispatch('authenticate');
+        if (success) {
+            next();
+        } else {
+            console.warn("Аутентификация не удалась");
+            next('/unauthorized');
+        }
+    } catch (e) {
+        console.error("Ошибка при аутентификации", e);
+        next('/unauthorized');
+    }
+});
+
 
 export default router;

@@ -1,5 +1,8 @@
 import {createStore} from 'vuex';
 
+const API_BASE_URL = 'http://localhost:8080';
+const API_IMAGE_BASE_URL = 'http://localhost:9000/images/'
+
 const store = createStore({
     state() {
         return {
@@ -9,7 +12,26 @@ const store = createStore({
             tools: [],
             cases: [],
             totalItemPages: 0,
-            itemById: null
+            itemById: null,
+            tokens: null,
+            accessToken: localStorage.getItem("accessToken") || null,
+            refreshToken: localStorage.getItem("refreshToken") || null,
+            user: (() => {
+                try {
+                    return JSON.parse(localStorage.getItem("user")) || null;
+                } catch (e) {
+                    return null;
+                }
+            })(),
+            roles: (() => {
+                try {
+                    return JSON.parse(localStorage.getItem("roles")) || [];
+                } catch (e) {
+                    return [];
+                }
+            })(),
+            tgWebAppData: null,
+            hash: null,
         };
     },
     mutations: {
@@ -75,9 +97,46 @@ const store = createStore({
         },
         setTotalItemPages(state, totalItemPages) {
             state.totalItemPages = totalItemPages;
-        }
+        },
+        setTokens(state, {accessToken, refreshToken}) {
+            state.accessToken = accessToken;
+            state.refreshToken = refreshToken;
+            localStorage.setItem("accessToken", accessToken);
+            localStorage.setItem("refreshToken", refreshToken);
+        },
+        clearTokens(state) {
+            state.accessToken = null;
+            state.refreshToken = null;
+            localStorage.removeItem("accessToken");
+            localStorage.removeItem("refreshToken");
+            state.user = null;
+            state.roles = [];
+            localStorage.removeItem("user");
+            localStorage.removeItem("roles");
+        },
+        setUser(state, user) {
+            state.user = user;
+            state.roles = user.roles || [];
+            localStorage.setItem("user", JSON.stringify(user));
+            localStorage.setItem("roles", JSON.stringify(user.roles || []));
+        },
+        clearUser(state) {
+            state.user = null;
+            state.roles = [];
+            localStorage.removeItem("user");
+            localStorage.removeItem("roles");
+        },
+        setTgWebAppData(state, data) {
+            state.tgWebAppData = data
+        },
+        setHash(state, hash) {
+            state.hash = hash;
+        },
     },
     getters: {
+        getImageUrl(state) {
+            return API_IMAGE_BASE_URL;
+        },
         getItemById(state) {
             return state.itemById
         },
@@ -98,132 +157,328 @@ const store = createStore({
         },
         getAllCases(state) {
             return state.cases;
-        }
+        },
+        isAuthenticated: (state) => !!state.accessToken,
+        getUser: (state) => state.user,
+        getRoles: (state) => state.roles,
+        hasRole: (state) => (role) => state.roles.includes(role),
+        hasAnyRole: (state) => (...roles) => roles.some(role => state.roles.includes(role))
     },
     actions: {
-        async fetchItems({commit}, {page = 0, size = 6, sort = "id,asc", itemName = "tools"}) {
-            const response = await fetch(`http://localhost:8080/api/${itemName}?page=${page}&size=${size}&sort=${sort}`);
+        async authenticate({commit, state}) {
+            if (state.accessToken) {
+                return true;
+            }
+            const initData = window.Telegram.WebApp.initData;
+            const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({initData})
+            });
+            if (!response.ok) {
+                return false;
+            }
+            const data = await response.json();
+            commit("setTokens", {
+                accessToken: data.accessToken,
+                refreshToken: data.refreshToken
+            });
+            const userResponse = await fetch(`${API_BASE_URL}/api/auth/me`, {
+                method: "GET",
+                headers: {
+                    "Authorization": `Bearer ${data.accessToken}`,
+                    "Content-Type": "application/json"
+                }
+            });
+            if (userResponse.ok) {
+                const userData = await userResponse.json();
+                console.log("user", userData);
+                commit("setUser", userData);
+            }
+            return true;
+        },
+
+        async authorizedFetch({dispatch, state, commit}, {url, options = {}}) {
+            let response = await fetch(`${API_BASE_URL}${url}`, {
+                ...options,
+                headers: {
+                    ...options.headers,
+                    "Authorization": `Bearer ${state.accessToken}`
+                }
+            });
+            if (response.status === 401 && state.refreshToken) {
+                const newAccessToken = await dispatch("refreshAccessToken");
+                if (newAccessToken) {
+                    response = await fetch(`${API_BASE_URL}${url}`, {
+                        ...options,
+                        headers: {
+                            ...options.headers,
+                            "Authorization": `Bearer ${newAccessToken}`
+                        }
+                    });
+                }
+            }
+            return response;
+        },
+        async refreshAccessToken({state, commit, dispatch}) {
+            const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+                method: "POST",
+                headers: {"Content-Type": "application/json"},
+                body: JSON.stringify({refreshToken: state.refreshToken})
+            });
+            if (response.ok) {
+                const newTokens = await response.json();
+                commit("setTokens", {accessToken: newTokens.accessToken, refreshToken: newTokens.refreshToken});
+                return newTokens.accessToken;
+            }
+            commit("clearTokens");
+            await dispatch("authenticate");
+            return null;
+        },
+
+        async fetchItems({commit, dispatch}, {page = 0, size = 6, sort = "id,asc", itemName = "tools"}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/${itemName}?page=${page}&size=${size}&sort=${sort}`,
+                options: {
+                    method: 'GET',
+                },
+            });
             const data = await response.json();
             const totalItemPages = data.page.totalPages;
             commit('setTotalItemPages', totalItemPages);
             commit('setItems', Array.isArray(data.content) ? data.content : []);
         },
 
-        async fetchItemById({commit}, {itemName, id}) {
-            console.log("Item name from store", itemName, id)
-            const response = await fetch(`http://localhost:8080/api/${itemName}/${id}`);
+        async fetchItemById({commit, dispatch}, {itemName, id}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/${itemName}/${id}`,
+                options: {
+                    method: 'GET',
+                },
+            });
             const data = await response.json();
             commit('setItemById', data)
         },
 
-        async fetchSuggestionsByCategory({commit}, {category, query, size = 5}) {
-            const response = await fetch(`http://localhost:8080/api/${category}/suggestions?query=${query}&size=${size}`);
+        async fetchSuggestionsByCategory({commit, dispatch}, {category, query, size = 5}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/${category}/suggestions?query=${query}&size=${size}`,
+                options: {
+                    method: 'GET',
+                },
+            });
             const data = await response.json();
             commit('setSuggestions', data.content);
         },
 
-        async fetchAllTerms({commit}) {
-            try {
-                const response = await fetch('http://localhost:8080/api/terms');
-                const data = await response.json();
-                commit('setTerms', data.content);
-            } catch (error) {
-                console.error('Ошибка при загрузке терминов:', error);
-            }
+        async fetchAllTerms({commit, dispatch}) {
+            const response = await dispatch("authorizedFetch", {
+                url: '/api/terms',
+                options: {
+                    method: 'GET',
+                },
+            });
+            const data = await response.json();
+            commit('setTerms', data.content);
         },
-        async fetchAllTools({commit}) {
-            try {
-                const response = await fetch('http://localhost:8080/api/tools');
-                const data = await response.json();
-                commit('setTools', data.content);
-            } catch (error) {
-                console.error('Ошибка при загрузке инструментов:', error);
-            }
+        async fetchAllTools({commit, dispatch}) {
+            const response = await dispatch("authorizedFetch", {
+                url: '/api/tools',
+                options: {
+                    method: 'GET',
+                },
+            });
+            const data = await response.json();
+            commit('setTools', data.content);
         },
-        async fetchAllCases({commit}) {
-            try {
-                const response = await fetch('http://localhost:8080/api/cases');
-                const data = await response.json();
-                commit('setCases', data.content);
-            } catch (error) {
-                console.error('Ошибка при загрузке кейсов:', error);
-            }
+        async fetchAllCases({commit, dispatch}) {
+            const response = await dispatch("authorizedFetch", {
+                url: '/api/cases',
+                options: {
+                    method: 'GET',
+                },
+            });
+            const data = await response.json();
+            commit('setCases', data.content);
         },
 
-        async createTerm({commit}, termData) {
-            const response = await fetch('http://localhost:8080/api/terms', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(termData)
+        async createTerm({commit, dispatch}, termData) {
+            await dispatch("authorizedFetch", {
+                url: '/api/terms',
+                options: {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(termData)
+                },
             });
         },
 
-        async updateTerm({commit}, term) {
-            const response = await fetch(`http://localhost:8080/api/terms/${term.id}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(term)
-            })
-            if (!response.ok) throw new Error('Ошибка при обновлении термина')
+        async updateTerm({commit, dispatch}, {termId, term}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/terms/${termId}`,
+                options: {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(term)
+                },
+            });
             const updated = await response.json()
             commit('updateTerm', updated)
+
         },
 
-        async createTool({commit}, toolData) {
-            try {
-                const response = await fetch('http://localhost:8080/api/tools', {
+        async createTool({commit, dispatch}, toolData) {
+            await dispatch("authorizedFetch", {
+                url: '/api/tools',
+                options: {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(toolData)
-                });
-
-                if (!response.ok) throw new Error('Ошибка при создании инструмента');
-
-            } catch (error) {
-                console.error('Ошибка:', error);
-            }
+                },
+            });
         },
 
-        async updateTool({commit}, tool) {
-            const response = await fetch(`http://localhost:8080/api/tools/${tool.id}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(tool)
-            })
-            if (!response.ok) throw new Error('Ошибка при обновлении инструмента')
+        async updateTool({commit, dispatch}, {toolId, tool}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/tools/${toolId}`,
+                options: {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(tool)
+                },
+            });
             const updated = await response.json()
             commit('updateTool', updated)
         },
 
-        async createCase({commit}, caseData) {
-            const response = await fetch('http://localhost:8080/api/cases', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(caseData)
+        async createCase({commit, dispatch}, caseData) {
+            await dispatch("authorizedFetch", {
+                url: `/api/cases`,
+                options: {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(caseData)
+                },
             });
-
-            if (!response.ok) throw new Error('Ошибка при создании кейса');
         },
 
-        async updateCase({commit}, caseItem) {
-            const response = await fetch(`http://localhost:8080/api/cases/${caseItem.id}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(caseItem)
-            })
-            if (!response.ok) throw new Error('Ошибка при обновлении кейса')
+        async updateCase({commit, dispatch}, {caseId, aCase}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/cases/${caseId}`,
+                options: {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(aCase)
+                },
+            });
             const updated = await response.json()
             commit('updateCase', updated)
         },
 
-        async deleteItem({commit}, {itemName, id}) {
-            const response = await fetch(`http://localhost:8080/api/${itemName}/${id}`, {
-                method: 'DELETE'
-            })
-            commit('removeCase', id)
-            commit('removeCase', id)
-            commit('removeCase', id)
-        }
+        async deleteItem({commit, dispatch}, {itemName, id}) {
+            await dispatch("authorizedFetch", {
+                url: `/api/${itemName}/${id}`,
+                options: {
+                    method: 'DELETE'
+                },
+            });
+            const capitalized = itemName.slice(0, -1).charAt(0).toUpperCase() + itemName.slice(1, -1)
+            commit(`remove${capitalized}`, id)
+
+        },
+
+        async uploadImage({dispatch}, file) {
+            const formData = new FormData()
+            formData.append("imageFile", file)
+            const response = await dispatch("authorizedFetch", {
+                url: "/api/images",
+                options: {
+                    method: "POST",
+                    body: formData
+                },
+            });
+            return response.json()
+        },
+
+        async deleteImage({dispatch}, imageName) {
+            await dispatch("authorizedFetch", {
+                url: `/api/images/${imageName}`,
+                options: {
+                    method: "DELETE",
+                },
+            });
+        },
+        async generateInviteLink({dispatch}, companyId) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/companies/${companyId}/link`,
+                options: {
+                    method: "GET",
+                },
+            });
+            return response.json();
+        },
+        async blockUser({dispatch}, userId) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/users/action/block/${userId}`,
+                options: {
+                    method: "POST",
+                },
+            });
+            return response.json();
+        },
+        async unblock({dispatch}, userId) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/users/action/unblock/${userId}`,
+                options: {
+                    method: "POST",
+                },
+            });
+            return response.json();
+        },
+        async detachUserFromCompany({dispatch}, {userId, companyId}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/companies/action/remove-user/${userId}/${companyId}`,
+                options: {
+                    method: "POST",
+                },
+            });
+            return response.json();
+        },
+        async assignUserCompany({dispatch}, {userId, companyId}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/companies/action/add-user/${userId}/${companyId}`,
+                options: {
+                    method: "POST",
+                },
+            });
+            return response.json();
+        },
+        async updateUserRoles({dispatch}, {userId, roles}) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/users/${userId}/roles`,
+                options: {
+                    method: "PUT",
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({roles: roles})
+                },
+            });
+            return response.json();
+        },
+        async createCompany({dispatch}, company) {
+            const response = await dispatch("authorizedFetch", {
+                url: `/api/companies`,
+                options: {
+                    method: "POST",
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(company)
+                },
+            });
+            return response.json();
+        },
+
+
     },
 });
 

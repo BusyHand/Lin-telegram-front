@@ -1,6 +1,7 @@
 <template>
-  <button type="button" :class="['btn btn-primary', customClass]" @click="openModal">
-    Создать
+  <button class="btn btn-outline-secondary" type="button" @click="openModal">
+    <i class="bi bi-gear-fill">
+    </i>
   </button>
 
   <teleport to="body">
@@ -9,11 +10,12 @@
       <div class="modal-dialog">
         <div class="modal-content">
           <div class="modal-header">
-            <h1 class="modal-title fs-5" id="staticBackdropLabel">Создание</h1>
+            <h1 class="modal-title fs-5" id="staticBackdropLabel">Управление ролями</h1>
             <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
           <div class="modal-body">
-            <crate-item-form/>
+            <role-set-form
+                :user="user"/>
           </div>
         </div>
       </div>
@@ -22,15 +24,12 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { Modal } from 'bootstrap'
-import CrateItemForm from '@/components/ui/editor/CrateItemForm.vue'
+import {onMounted, ref} from 'vue'
+import {Modal} from 'bootstrap'
+import RoleSetForm from "@/components/ui/admin/RoleSetForm.vue";
 
 const props = defineProps({
-  customClass: {
-    type: String,
-    default: ''
-  }
+  user: Object
 })
 
 const modalRef = ref(null)

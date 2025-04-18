@@ -14,11 +14,9 @@
             <button type="button" class="btn-close" @click="closeModal"></button>
           </div>
           <div class="modal-body">
-            <crate-item-form :initial-data="model"/>
-          </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeModal">Закрыть</button>
-            <button type="button" class="btn btn-primary">Сохранить</button>
+            <edit-item-form
+                :item="item"
+                :type="type"/>
           </div>
         </div>
       </div>
@@ -29,9 +27,13 @@
 <script setup>
 import {onMounted, ref} from 'vue'
 import {Modal} from 'bootstrap'
-import CrateItemForm from '@/components/ui/editor/CrateItemForm.vue'
+import EditItemForm from "@/components/ui/editor/EditItemForm.vue";
 
-const model = ref(null)
+const props = defineProps({
+  item: Object,
+  type: String,
+})
+
 const modalRef = ref(null)
 let modalInstance = null
 

@@ -19,11 +19,9 @@
           {{ truncateText(entry[key]) }}
         </div>
         <div class="custom-col custom-col-actions" data-label="Действия" @click.stop>
-          <button v-if="entry.isBlock" @click.stop="detachCompany(entry.id)" class="btn btn-outline-danger">
-            <i class="bi bi-building-fill-dash"></i>
-          </button>
-          <button v-if="!entry.isBlock" @click.stop="assignCompany(entry.id)" class="btn btn-outline-success">
-            <i class="bi bi-building-fill-add"></i>
+          <button v-if="!entry.isBlock" @click.stop="generateInviteLink(entry.id)" class="btn btn-outline-success">
+            <i class="bi bi-qr-code">
+            </i>
           </button>
           <button class="btn btn-outline-danger" @click.stop="remove(entry.id)">
             <i class="bi bi-trash-fill"></i>
@@ -31,11 +29,18 @@
         </div>
       </li>
     </ul>
+    <InviteLinkModal
+        :visible="showModal"
+        :linkData="inviteLinkData"
+        @close="showModal = false"
+    />
   </div>
 </template>
 
 <script setup>
-import {defineEmits, defineProps} from 'vue'
+import {defineEmits, defineProps, ref} from 'vue'
+import store from "@/store/store.js";
+import InviteLinkModal from "@/components/ui/admin/InviteLinkModal.vue";
 
 const props = defineProps({
   title: String,
@@ -44,14 +49,22 @@ const props = defineProps({
   data: Array
 })
 
+const showModal = ref(false)
+const inviteLinkData = ref({link: '', qrName: ''})
+
+const generateInviteLink = async (companyId) => {
+  const data = await store.dispatch('generateInviteLink', companyId)
+  inviteLinkData.value = data
+  console.log("inviteLinkData", inviteLinkData.value)
+  showModal.value = true
+}
 
 const truncateText = (text) =>
     text?.length > 100 ? text.substring(0, 100) + '...' : text || ''
 
-const emit = defineEmits(['delete', 'go-to-page'])
+const emit = defineEmits(['delete'])
 
 const remove = (id) => emit('delete', id)
-const goToPage = (entry) => emit('go-to-page', entry)
 </script>
 
 <style scoped>
